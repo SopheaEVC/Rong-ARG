@@ -2,44 +2,168 @@
 library(rjson)
 library(sf)
 library(tidyverse)
+library(ggspatial)
 
 # Loading files 
 crs = st_crs("+proj=longlat +datum=WGS84 +no_defs")
-n <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sf_data/geoBoundaries-KHM-ADM0.geojson") %>%
+p <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sfdata_v2/province.geojson") %>%
      st_as_sf() %>% 
      st_transform(crs = crs)
-p <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sf_data/geoBoundaries-KHM-ADM1.geojson") %>%
-     st_as_sf() %>% 
-     st_transform(crs = crs)
+
+d <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sfdata_v2/district.geojson") %>%
+        st_as_sf() %>% 
+        st_transform(crs = crs)
+c <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sfdata_v2/commune.geojson") %>%
+        st_as_sf() %>% 
+        st_transform(crs = crs)
+# check data
+glimpse(p)
+glimpse(d)
+glimpse(c)
+
+# Preah Sihanouk module
 ps.sf <- p %>%
-     filter(shapeName == "Preah Sihanouk")
-d <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sf_data/geoBoundaries-KHM-ADM2.geojson") %>%
-     st_as_sf() %>% 
-     st_transform(crs = crs) 
-     
-c <- st_read("C:/Rstudio/Rong_ARG/Rong-ARG/sf_data/geoBoundaries-KHM-ADM3.geojson") %>%
-     st_as_sf() %>% 
-     st_transform(crs = crs)
+        filter(HRName == "Preah Sihanouk")
+ps.procode <- 18
+ps.ps.d <- d %>% filter(PRO_CODE == 18) %>% 
+        filter(DIS_CODE == 1801)
+ps.RongARG <- c %>%
+        filter(DIS_CODE == 1801) %>%
+        filter(COM_CODE == 180105)
+        
+# define colors
+line.col <- "black"
+p.col = "white"
+ps.p.col <- "grey95"
+ps.d.col <- "grey90"
+ps.c.col <- "grey80"
+sea.col <- "#a7cdf2"
 
-line.color <- "black"
-study_col <- "grey"
-ps.district 
 
 
-# Create Insect Map
-get_cam_map <- function(){
-     cam_map <- ggplot() +
-          geom_sf(data = n,
-                  fill = 'lightgrey', 
-                  color = line.color) +
-          geom_sf(data = p, 
-                  fill = 'lightgrey') +
-          geom_sf(data = ps.sf, 
-                  fill = study_col, 
-                  col = line.color)+
-          theme_void()
-     return(cam_map)
-}
-get_cam_map()
+# Create insect map
+
+ggplot() +
+        geom_sf(data = p,
+                  fill = p.col, 
+                  color = line.col)+
+        geom_sf(data = ps.sf, 
+                fill = ps.d.col) +
+        geom_sf(data = ps.RongARG , 
+                  fill = ps.c.col, 
+                  col = line.col)+
+        theme_void()
+
+# Zooming province
+ggplot() +
+        geom_sf(data = p, 
+                fill = p.col)+
+        geom_sf(data = ps.sf, 
+                fill = ps.p.col) +
+        geom_sf(data = ps.ps.d, 
+                fill = ps.d.col, 
+                size = 0.02) +
+        geom_sf(data = ps.RongARG, 
+                fill = ps.c.col) +
+        coord_sf(xlim = c(103.0, 104.5), 
+                 ylim = c(10.4, 11.5)) + 
+        annotate(geom = "text", x = 103.18, y = 11,
+                 hjust = 0, vjust = 1,
+                 label = "Koh Kong", size = 3,
+                 color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x = 104.2, y =11.3 ,
+                 hjust = 0, vjust = 1,
+                 label = "Kompong Speu", size = 3
+                 , color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x =104.02 , y = 10.8,
+                 hjust = 0, vjust = 0,
+                 angle = 60,
+                 label = "Kampot", size = 3, 
+                 color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x =103.7 , y = 10.6,
+                 hjust = 0, vjust = 0,
+                 label = "Preah Sihanouk", size = 3, 
+                 angle = 60, color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x =104.3 , y = 10.5,
+                 hjust = 0, vjust = 0,
+                 label = "Kep", size = 3, 
+                 color = "black", 
+                 fontface="italic") +
+        annotation_scale(location = "bl",bar_cols = c("grey60", "white"), text_family = "ArcherPro Book") +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.margin = unit(c(0,0,0,0), "cm"),
+              plot.margin = unit(c(0,0,0,0), "cm"),
+              axis.title = element_blank(),
+              axis.ticks.length = unit(-0.15, "cm"),
+              legend.position = "none", 
+              panel.background = element_rect(fill = sea.col),#d0cfd4,#a2d2ff
+              panel.border = element_rect( color = "grey20", 
+                                           fill = NA, size = 1))
+
+# District Map
+# 1. plot Preah Sihanouk map 
+# 2. district boundaries
+# 3. focus on commune
+
+xmin = 103.2
+xmax = 104.5
+ymin = 10.4
+ymax = 11.5
+
+ggplot() +
+        geom_sf(ps.ps.d, 
+                fill = ps.p.col)+
+        geom_sf(data = ps.sf, 
+                fill = ps.p.col) +
+        geom_sf(data = ps.ps.d, 
+                fill = ps.d.col, 
+                size = 0.02) +
+        geom_sf(data = ps.RongARG, 
+                fill = ps.c.col) +
+        coord_sf(xlim = c(xmin, xmax), 
+                 ylim = c(ymin, ymax)) 
+        annotate(geom = "text", x = 103.18, y = 11,
+                 hjust = 0, vjust = 1,
+                 label = "Koh Kong", size = 3,
+                 color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x = 104.2, y =11.3 ,
+                 hjust = 0, vjust = 1,
+                 label = "Kompong Speu", size = 3
+                 , color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x =104.02 , y = 10.8,
+                 hjust = 0, vjust = 0,
+                 angle = 60,
+                 label = "Kampot", size = 3, 
+                 color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x =103.7 , y = 10.6,
+                 hjust = 0, vjust = 0,
+                 label = "Preah Sihanouk", size = 3, 
+                 angle = 60, color = "black", 
+                 fontface="italic")+
+        annotate(geom = "text", x =104.3 , y = 10.5,
+                 hjust = 0, vjust = 0,
+                 label = "Kep", size = 3, 
+                 color = "black", 
+                 fontface="italic") +
+        annotation_scale(location = "bl",bar_cols = c("grey60", "white"), text_family = "ArcherPro Book") +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.margin = unit(c(0,0,0,0), "cm"),
+              plot.margin = unit(c(0,0,0,0), "cm"),
+              axis.title = element_blank(),
+              axis.ticks.length = unit(-0.15, "cm"),
+              legend.position = "none", 
+              panel.background = element_rect(fill = sea.col),#d0cfd4,#a2d2ff
+              panel.border = element_rect( color = "grey20", 
+                                           fill = NA, size = 1))
+
 
 
