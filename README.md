@@ -10,10 +10,10 @@ Sub-national Administrative Boundaries contain __three__ files:
 - These data files located in [sfdata_v2](https://github.com/SopheaEVC/Rong-ARG/tree/main/sf_data) folder. 
 - Map design concept was inspired by [GorkyFlorez](https://github.com/GorkyFlorez/Mapa_Ubicacion_Cuenca/blob/main/Mapa%20de%20clasificacion.png). 
 
-| Column 1 | Column 2 |
+| Figure | Table |
 |---|---|
-| Row 1, Cell 1 | Row 1, Cell 2 |
-| Row 2, Cell 1 | Row 2, Cell 2 |
+| [Figure 1](https://colab.google/)| [Table 1](https://colab.google/)|
+| Figure 2 | Table 2 |
 
 
 
