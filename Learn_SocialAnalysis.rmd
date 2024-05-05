@@ -1,0 +1,2532 @@
+---
+title: "Social Data Analysis"
+format: revealjs
+---
+
+## Loading Data and Packages
+
+```{r}
+rm(list = ls()) #remove environment
+library(readxl)
+library(tidyverse)
+library(foreign)
+library(formattable)
+```
+
+```{r}
+neifinal <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Data-file-NEI-final.xlsx")
+Oct2011_data <- read.spss("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Data-file-Oct-2011.sav")
+
+phdata <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Phd_data.xls",
+                     sheet = "Data-file")
+```
+
+## Demographic Information
+
+#### Sources of annual income
+
+```{r}
+library(assertr)
+library(magrittr)
+
+df <- phdata %>%
+  select(resp, starts_with("8")) %>%
+  select(resp, `81`:`87`) %>%
+  pivot_longer(`81`:`87`, names_to = "income_res", 
+               values_to = "income")
+# calculate income for individuals
+individual_income <- df %>%
+     group_by(resp) %>%
+     summarize(agg_income = sum(income))
+boxplot(individual_income$agg_income)
+names(individual_income)
+
+# remove outliers
+Outlier_removed <- individual_income %>%
+     filter(agg_income < 4000)
+boxplot(Outlier_removed$agg_income)
+hist(Outlier_removed$agg_income, 
+     main = "Daily income", 
+     xlab = "Income in '$' ")
+removed_obs <- nrow(individual_income)-nrow(Outlier_removed)
+removed_obs
+```
+
+```{r}
+phdata %>%
+  select(resp, starts_with("8")) %>%
+  select(resp, `81`:`87`) %>%
+  pivot_longer(`81`:`87`, names_to = "income_res", 
+               values_to = "income") %>%
+  mutate(income_re_labs = case_when(
+    income_res == "81" ~ "Rice farming",
+    income_res == "82" ~ "Gardening/cropping",
+    income_res == "83" ~ "Livestock",
+    income_res == "84" ~ "Fishery",
+    income_res == "85" ~ "Self-employed business",
+    income_res == "86" ~ "Employee (public & private)",
+    income_res == "87" ~ "Others"
+  )) %>%
+  select(income_re_labs, income) %>%
+  group_by(income_re_labs) %>%
+  summarise(min_income = min(income),
+            max_income = max(income),
+            q25 = quantile(income, probs = .25),
+            q25_percent = formattable::percent(q25/max_income),
+            q50 = quantile(income, probs = .50),
+            q50_percent = formattable::percent(q50/max_income),
+            q75 = quantile(income, probs = .75),
+            q75_percent = formattable::percent(q75/max_income),
+            avg_income = mean(income),
+            sd_income = sd(income), 
+            respd = n()) %>%
+  arrange(desc(avg_income)) %>%
+  as_tibble()
+```
+
+```{r}
+#summary income by sources
+phdata %>%
+  select(resp, starts_with("8")) %>%
+  select(resp, `81`:`87`) %>%
+  pivot_longer(`81`:`87`, names_to = "income_res", 
+               values_to = "income") %>%
+  mutate(income_re_labs = case_when(
+    income_res == "81" ~ "Rice farming",
+    income_res == "82" ~ "Gardening/cropping",
+    income_res == "83" ~ "Livestock",
+    income_res == "84" ~ "Fishery",
+    income_res == "85" ~ "Self-employed business",
+    income_res == "86" ~ "Employee (public & private)",
+    income_res == "87" ~ "Others"
+  )) %>%
+  select(income_re_labs, income) %>%
+  group_by(income_re_labs) %>%
+  summarise(min_income = min(income),
+            max_income = max(income),
+            q25 = quantile(income, probs = .25),
+            q25_percent = formattable::percent(q25/max_income),
+            q50 = quantile(income, probs = .50),
+            q50_percent = formattable::percent(q50/max_income),
+            q75 = quantile(income, probs = .75),
+            q75_percent = formattable::percent(q75/max_income),
+            avg_income = mean(income),
+            sd_income = sd(income), 
+            respd = n()) %>%
+  arrange(desc(avg_income)) %>%
+  as_tibble()
+
+#Total income per individual
+exchange_rate <- 4000
+
+phdata %>%
+  select(resp, starts_with("8")) %>%
+  select(resp, `81`:`87`) %>%
+  pivot_longer(`81`:`87`, names_to = "income_res", 
+               values_to = "income") %>%
+  mutate(income_re_labs = case_when(
+    income_res == "81" ~ "Rice farming",
+    income_res == "82" ~ "Gardening/cropping",
+    income_res == "83" ~ "Livestock",
+    income_res == "84" ~ "Fishery",
+    income_res == "85" ~ "Self-employed business",
+    income_res == "86" ~ "Employee ( public & private)",
+    income_res == "87" ~ "Others",
+    TRUE ~ NA
+  )) %>%
+  select(resp, income_re_labs, income) %>%
+  mutate(income_dollar = income/exchange_rate) %>%
+  group_by(resp) %>%
+  summarise(min_income = min(income_dollar),
+            max_income = max(income_dollar),
+            avg_income = mean(income_dollar),
+            sd_income = sd(income_dollar))
+
+```
+
+```{r}
+phdata %>%
+  select(resp, starts_with("8")) %>%
+  select(resp, `81`:`87`) %>%
+  pivot_longer(`81`:`87`, names_to = "income_res", values_to = "income") %>%
+  mutate(income_re_labs = case_when(
+    income_res == "81" ~ "Rice farming",
+    income_res == "82" ~ "Gardening/cropping",
+    income_res == "83" ~ "Livestock",
+    income_res == "84" ~ "Fishery",
+    income_res == "85" ~ "Self-employed business",
+    income_res == "86" ~ "Employee ( public & private)",
+    income_res == "87" ~ "Others"
+  )) %>%
+  ggplot() +
+  geom_boxplot(aes(y = income, x = income_re_labs)) +
+  ylim(0, 5000) +
+  coord_flip() +
+  theme_classic() +
+  labs(x = NULL, 
+       y = "Daily Income in Riels")
+```
+
+### Age
+
+```{r}
+skim(phdata)
+sumtable(phdata)
+vtable::countNA(phdata)
+```
+
+### Gender
+
+```{r}
+df <- phdata %>%
+  mutate(gender = case_when(
+    `2` == 0 ~ "Male",
+    `2` == 1 ~ "Female",
+    TRUE ~ NA
+  )) %>% group_by(gender) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+```
+
+```{r}
+phdata %>%
+  mutate(jb = case_when(
+    `7` == 1 ~ "Rice Farmer",
+    `7` == 2 ~ "Garden/crop farmer",
+    `7` == 3 ~ "Livestock raiser",
+    `7` == 4 ~ "Worker (construction, etc.)",
+    `7` == 5 ~ "Self-businessmen",
+    `7` == 6 ~ "Employee ( Gov’t, NGOs, private)",
+    `7` == 7 ~ "Fishermen",
+    `7` == 8 ~ "Other", 
+    TRUE ~ NA)) %>%
+  select(`7`, jb, everything()) %>%
+  group_by(jb) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+```
+
+### Education
+
+-   The distribution of education in the study site is low, with 50% of the participants completed only a grade 4 education or below. The 75th percentile of the participants completed primary education, grade 6. This means that there is a large gap between the education levels of the participants.
+
+-   The mean education level is 3.85, which is lower than the median education level of 4.00. This suggests that there are a few participants with very high education levels, which is skewing the mean. The standard deviation of education is 2.99, which is relatively high. This suggests that there is a lot of variation in the education levels of the participants.
+
+-   Comparing to the primary education level, the education of the participants (M = 3.85, SD = 2.99) is much lower, t (547) = -16.81 and p \< 0.001.
+
+-   According to t-test revealed that there is a statistically significant difference in average education level between genders (p \< 0.001). Females had an average of 3.42 years of education, while males had an average of 4.49 years, representing a difference of 1.07 years.
+
+-   <div>
+
+    > The 333 female participants who has been obtained formal education (M = 3.43, SD = 2.93) comparing to 215 male (M = 4.49, SD = 2.97) demonstrated a significantly low, t(546) = -4.096, p\<0.001.
+
+    </div>
+
+-   @Learnmore:
+
+    -   Roles of gender response to climate change to be resilience
+
+    -   Adaptation, Resilience, shocks and stresses
+
+```{r}
+phdata %>%
+  select(`3`) %>%
+  summary()
+sd(phdata$`3`)
+
+# Do the participants has education lower than primary education (grade 6)?
+
+mean(phdata$`3`)
+sd(phdata$`3`)
+
+mu = 6
+alpha = 0.05
+t.test(genedu_data$`3`, mu = mu, conf.level = alpha, alternative = "two.sided")
+
+# Are male and female different level of education in the study areas?
+genedu_data <- phdata %>%
+  mutate(gender = case_when(
+    `2` == 0 ~ "Male",
+    `2` == 1 ~ "Female",
+    TRUE ~ NA)) %>%
+  select(gender, `3`)
+# mean and sd of male and female
+genedu_data %>%
+  group_by(gender) %>%
+  summarise(mean = mean(`3`),
+            sd = sd(`3`), 
+            count = n())
+
+genedu_data$gender <- as.factor(genedu_data$gender)
+genedu_data$`3` <- as.numeric(genedu_data$`3`)
+
+# Independent t-test
+t.test(`3` ~ gender, var.equal = TRUE, data = genedu_data)
+
+```
+
+### Marital Status
+
+```{r}
+phdata %>%
+  mutate(marital = case_when(
+    `5` == 1 ~ "Single",
+    `5` == 2 ~ "Married",
+    `5` == 3 ~ "Devorced",
+    `5` == 4 ~ "Others",
+    TRUE ~ NA
+  )) %>%
+  group_by(marital) %>%
+  summarise(count = n()) %>% 
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+
+```
+
+### Current Jobs
+
+```{r}
+phdata %>%
+  mutate(jb = case_when(
+    `7` == 1 ~ "Rice Farmer",
+    `7` == 2 ~ "Garden/crop farmer",
+    `7` == 3 ~ "Livestock raiser",
+    `7` == 4 ~ "Worker (construction, etc.)",
+    `7` == 5 ~ "Self-businessmen",
+    `7` == 6 ~ "Employee (Gov’t, NGOs, private)",
+    `7` == 7 ~ "Fishermen",
+    `7` == 8 ~ "Other", 
+    TRUE ~ NA)) %>%
+  select(`7`, jb, everything()) %>%
+  group_by(jb) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+```
+
+## Annual Income sources
+
+# Access to five main assets
+
+### Human Resource
+
+##### Do you have skill (through training) due to your current work?
+
+```{r}
+phdata %>%
+  mutate(trained_skill = case_when(
+    `9` == 0 ~ "Yes", 
+    `9` == 1 ~ "No",
+    TRUE ~ NA)) %>%
+  group_by(trained_skill) %>%
+  summarise(count = n()) %>% 
+  mutate(percent = formattable::percent(count/sum(count))) 
+```
+
+##### Is your current skill sufficient for your current work?
+
+```{r}
+sufskill<- data.frame(code = c(0, 1), 
+                     labs = c("Yes", "No"))
+phdata %>%
+  mutate(sufskill = case_when(
+    `10` == 0 ~ "Yes",
+    `10` == 1 ~ "No", 
+    TRUE ~ NA
+  )) %>%
+  group_by(sufskill) %>%
+  summarise(reps = n()) %>% 
+  mutate(percent = formattable::percent(reps/sum(reps)))
+```
+
+##### Do you have a plan to take any professional skill in the future?
+
+```{r}
+planprofskill<- data.frame(code = c(0, 1), 
+                     labs = c("Yes", "No"))
+phdata %>%
+  mutate(planprofskill = case_when(
+    `11` == 0 ~ "Yes", 
+    `11` == 1 ~ "No",
+    TRUE ~ NA
+  )) %>%
+  group_by(planprofskill) %>%
+  summarise(reps = n()) %>% 
+  mutate(percent = formattable::percent(reps/sum(reps)))
+```
+
+#### Natural Resources
+
+##### What natural resources are you accessible for your livelihood?
+
+```{r}
+phdata %>%
+  select(`121`:`124`) %>%
+  pivot_longer(cols = `121`:`124`, names_to = "accnat_livelihood", values_to = "value") %>%
+  mutate(natacclive = case_when(
+    value == 1 ~ "Water", 
+    value == 2 ~ "Fishery",
+    value == 3 ~ "Aquaculture", 
+    value == 4 ~ "Forests",
+    value == 5 ~ "Wild animals",
+    value == 6 ~ "Birds", 
+    value == 7 ~ "Others",
+    TRUE ~ NA
+  )) %>%
+  group_by(natacclive)%>%
+  drop_na() %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+```
+
+##### Is the collection of above resources sufficient for your livelihood?
+
+```{r}
+phdata %>%
+  mutate(are_ressuf = case_when(
+    `13` == 0 ~ "Yes", 
+    `13` == 1 ~ "No", 
+    TRUE~NA
+  )) %>%
+  group_by(are_ressuf) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+```
+
+##### Do you get enough water for your agriculture and other activities?
+
+```{r}
+enoughwater <- phdata %>%
+  mutate(enoughwater = case_when(
+    `14` == 0 ~ "Yes", 
+    `14` == 1 ~ "No",
+    TRUE ~ NA
+  )) %>%
+  group_by(enoughwater) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+enoughwater
+```
+
+```{r}
+163+61+50
+```
+
+#### Natural Resource: Report
+
+-   The result shows that half of respondents (n = 548) is insufficient water using for their agriculture and daily usages. However, there is only 49.45% of the respondents has enough water for growing their crops.
+
+-   During the dry season, 59.49% of the respondents (n = 274) is not enough water to use following by 22.26% during the wet season, while at least 18% are lacking of water both seasons.
+
+-   Farmers whose main jobs in rice and crops are more frequent facing for lacking of water to watering their crops accounting for 62% (n = ) and 51% (n = ) following by fisherman, livestock raiser, employee; workers,
+
+    @Learnmore: we can tell the audience about @season (which season are sensitive to the water insufficiency in @studysites and what kinds of @primaryjobs
+
+-   Farmers whose main jobs in rice and crops are more frequent facing for water shortage to watering their crops during @seasons
+
+-   Relating to above statistics, Stueng Treng province is the most lack of water using for growing crops by 64.78% of the responded participants (n = 173) while Prey Veng and Kompong Cham are the second and third province that have limited water for doing agriculture with 49.73% (n = 185) and 38.42% (n = 190) respectively.
+
+-   @Learnmore: What are the factors can affect percentage of getting enough water? Are survey sites matter? jobs? or what? access to natural resources?
+
+    -   Study sites
+
+    -   Jobs
+
+    -   A
+
+```{r}
+jb_enoughwater <- phdata %>%
+  mutate(jb = case_when(
+    `7` == 1 ~ "Rice Farmer",
+    `7` == 2 ~ "Garden/crop farmer",
+    `7` == 3 ~ "Livestock raiser",
+    `7` == 4 ~ "Worker (construction, etc.)",
+    `7` == 5 ~ "Self-businessmen",
+    `7` == 6 ~ "Employee ( Gov’t, NGOs, private)",
+    `7` == 7 ~ "Fishermen",
+    `7` == 8 ~ "Other", 
+    TRUE ~ NA)) %>%
+  mutate(enoughwater = case_when(
+    `14` == 0 ~ "Yes", 
+    `14` == 1 ~ "No",
+    TRUE ~ NA)) %>%
+  group_by(jb, enoughwater)%>%
+  drop_na() %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count)))
+jb_enoughwater
+jb_enoughwater %>%
+  filter(enoughwater != "Yes") %>%
+  arrange(desc(percent))
+```
+
+```{r}
+natacclive_enoughwater_byprov <- phdata %>%
+  select(`121`:`124`, `14`) %>%
+  pivot_longer(cols = `121`:`124`, names_to = "accnat_livelihood", values_to = "value") %>%
+  mutate(natacclive = case_when(
+    value == 1 ~ "Water", 
+    value == 2 ~ "Fishery",
+    value == 3 ~ "Aquaculture", 
+    value == 4 ~ "Forests",
+    value == 5 ~ "Wild animals",
+    value == 6 ~ "Birds", 
+    value == 7 ~ "Others",
+    TRUE ~ NA
+  )) %>%
+  mutate(enoughwater_byprov = case_when(
+    `14` == 0 ~ "Yes", 
+    `14` == 1 ~ "No",
+    TRUE ~ NA)) %>%
+  group_by(natacclive, enoughwater_byprov)%>%
+  drop_na() %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  filter(enoughwater_byprov == "No") %>%
+  arrange(desc(percent))
+natacclive_enoughwater_byprov 
+```
+
+```{r}
+enoughwater_byprov <- phdata %>%
+  mutate(province = case_when(
+    prov == 1 ~ "Stueng Treng",
+    prov == 2 ~ "Prey Veng",
+    prov == 3 ~ "Kompong Cham",
+    TRUE ~ NA)) %>%
+  mutate(enoughwater_byprov = case_when(
+    `14` == 0 ~ "Yes", 
+    `14` == 1 ~ "No",
+    TRUE ~ NA)) %>%
+  group_by(province, enoughwater_byprov) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count)))
+
+enoughwater_byprov
+enoughwater_byprov %>%
+  filter(enoughwater_byprov == "No") %>%
+  arrange(desc(percent))
+```
+
+##### If not enough, which season do you face inadequate water?
+
+```{r}
+not_enough_byseasonwater <- phdata %>%
+  mutate(not_enoughwater_byseason = case_when(
+    `15` == 1 ~ "Rainy season", 
+    `15` == 2 ~ "Dry season", 
+    `15` == 3 ~ "both",
+    TRUE ~ NA
+  )) %>%
+  group_by(not_enoughwater_byseason) %>%
+  summarise(count = n()) %>%
+  drop_na() %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>%
+  arrange(desc(percent))
+not_enough_byseasonwater
+# sum(season_not_enoughwater$count)
+```
+
+##### Jobs: If not enough, which season do you face inadequate water?
+
+```{r}
+jb_not_enough_byseasonwater <- phdata %>%
+  mutate(jb = case_when(
+    `7` == 1 ~ "Rice Farmer",
+    `7` == 2 ~ "Garden/crop farmer",
+    `7` == 3 ~ "Livestock raiser",
+    `7` == 4 ~ "Worker (construction, etc.)",
+    `7` == 5 ~ "Self-businessmen",
+    `7` == 6 ~ "Employee ( Gov’t, NGOs, private)",
+    `7` == 7 ~ "Fishermen",
+    `7` == 8 ~ "Other", 
+    TRUE ~ NA)) %>%
+  mutate(season = case_when(
+    `15` == 1 ~ "Rainy season", 
+    `15` == 2 ~ "Dry season", 
+    `15` == 3 ~ "both",
+    TRUE ~ NA
+  )) %>%
+  group_by(jb, season) %>%
+  summarise(count = n()) %>%
+  drop_na() %>%
+  mutate(percent = formattable::percent(count/sum(count)))
+
+jb_not_enough_byseasonwater %>%
+  filter(season == "Dry season") %>%
+  arrange(desc(percent))
+jb_not_enough_byseasonwater %>%
+  filter(season == "Rainy season") %>%
+  arrange(desc(count))
+
+```
+
+```{r}
+phdata %>%
+  select(starts_with("16")) %>%
+  pivot_longer(cols = `161`:`164`, names_to = "q16",
+               values_to = "phy.cat") %>%
+  group_by(phy.cat) %>%
+  summarise(n = n()) %>% # 0 is not preferred
+  filter(phy.cat != 0) %>%
+  mutate(percent = formattable::percent(round(n/sum(n), 3))) 
+
+```
+
+```{r}
+#Access to physical assets by Province 
+phdata %>%
+  select(prov, everything()) %>%
+  select(prov, starts_with("16")) %>%
+  pivot_longer(cols = `161`:`164`, names_to = "q16",
+               values_to = "phy.cat") %>%
+  group_by(prov, phy.cat) %>%
+  filter(phy.cat != 0) %>% # 0 means the another has been selected.
+  summarise(n = n()) %>% 
+  mutate(percent = formattable::percent(round(n/sum(n), 3)))
+```
+
+### Physical Resources
+
+##### What physical resources are you accessible for your livelihood?
+
+```{r}
+phdata %>%   select(starts_with("16")) %>%   
+  pivot_longer(cols = `161`:`164`, names_to = "q16",                values_to = "phy.cat") %>%   
+  mutate(physical = case_when(     
+    phy.cat == 1 ~ "Irrigation",    
+    phy.cat == 2  ~ "Roads",     
+    phy.cat == 3 ~ "Bridge",     
+    phy.cat == 4 ~ "Water gates",    
+    phy.cat == 5~ "Public transportation",  
+    phy.cat == 6 ~ "Others",     
+    TRUE ~ NA)) %>%   
+  group_by(physical) %>%  
+  drop_na() %>%   
+  summarise(count = n())%>% 
+  mutate(percent = formattable::percent(round(count/sum(count), 3))) %>%   arrange(desc(percent))
+```
+
+##### Are you accessible to all key physical resources to your livelihood?
+
+```{r}
+phdata %>%   mutate(acckeyphy = case_when(     
+  `17` == 0 ~ "Yes",  
+  `17` == 1 ~ "No",  
+  TRUE ~ NA)) %>%   
+  group_by(acckeyphy) %>%  
+  summarise(count = n()) %>%  
+  mutate(percent = formattable::percent(count/sum(count))) 
+```
+
+### Financial resources
+
+##### Could you access the finical resources for income generation activities?
+
+```{r}
+
+phdata %>%
+  mutate(fr_genincome = case_when(
+    `19` == 0 ~ "Yes",
+    `19` == 1 ~ "No",
+    TRUE~NA
+  )) %>%
+  group_by(fr_genincome) %>%
+  summarise(count = n()) %>% 
+  mutate(percent = formattable::percent(count/sum(count)))
+
+```
+
+##### What would be the most important barriers for you to get the financial resource?
+
+```{r}
+phdata %>%
+  select(starts_with("21")) %>%
+  pivot_longer(cols = `2121`:`2124`, names_to = "q21",
+               values_to = "fr_barrier") %>%
+  mutate(barrier = case_when(
+    fr_barrier == 1 ~ "No collateral",
+    fr_barrier == 2 ~ "High interest rate",
+    fr_barrier== 3 ~ "Absence of information",
+    fr_barrier == 4 ~ "Fear of the risk of business",
+    fr_barrier == 5 ~ "Inaccessibility to any sources",
+    fr_barrier == 6 ~ "Others",
+    TRUE ~ NA)) %>%
+  group_by(barrier) %>%
+  summarise(count = n()) %>%
+  drop_na() %>%
+  mutate(percent = formattable::percent(round(count/sum(count), 3))) %>%
+  arrange(desc(percent))
+```
+
+### Social Resources
+
+```{r}
+# Checking data 
+phdata %>%
+  select(starts_with("23")) %>%
+  names()
+```
+
+##### What types of activities have you been involved in the past10 years?
+
+```{r}
+phdata %>%
+  select(starts_with("23")) %>%
+    pivot_longer(cols = `231`:`234`, 
+               names_to = "act_last10yrs",
+               values_to = "value") %>%
+  mutate(type_act = case_when(
+    value == 1 ~ "Workshop",
+    value == 2 ~ "Community meeting",
+    value == 3 ~ "Campaign and advocacy ",
+    value == 4 ~ "Commune investment plan (CIP)",
+    value == 5 ~ "Volunteer work", 
+    value == 6 ~ "Other",
+    TRUE ~ NA
+  )) %>%
+  group_by(type_act)%>%
+  summarise(count = n()) %>% 
+  drop_na() %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>% arrange(desc(percent))
+```
+
+##### Interpretation
+
+-   Community meeting: raise issues
+
+-   Community development plans: Crucial for development, but why 17.8 %
+
+-   Volunteers: Explain why importance in community development
+
+    **Note**: Scale data is preferred.
+
+-   median is used when standard deviation is large. Distance from one to another individual.
+
+```{r}
+phdata %>%
+  select(starts_with("24")) %>%
+    pivot_longer(cols = `2121`:`2124`, 
+               names_to = "mainrole",
+               values_to = "value") %>%
+  mutate(main_role = case_when(
+    value == 1 ~ "Decision maker",
+    value == 2 ~ "Discussant",
+    value == 3 ~ "Obsever",
+    value == 4 ~ "Other",
+    TRUE ~ NA
+  )) %>%
+  group_by(main_role)%>%
+  summarise(count = n()) %>% 
+  drop_na() %>%
+  mutate(percent = formattable::percent(count/sum(count))) %>% arrange(desc(percent))
+```
+
+#### Five-points scale
+
+::: callout-important
+-   Very Low (Vl) = 0.00–0.20
+-   Low (L) = 0.21–0.40
+-   Moderate (M) = 0.41–0.60
+-   High (H) = 0.61–0.80
+-   Very High (VH) = 0.81–1.00
+:::
+
+### Perceptions on uncertainties and change influencing livelihoods of the villagers
+
+#### Perceptions on the availability of natural resources within the past 10 years
+
+##### Natural resources accessibility
+
+```{r}
+#overall
+phdata %>%
+  select(starts_with("30")) %>%
+  pivot_longer(cols = `301`:`306`, 
+               names_to = "natacc",
+               values_to = "levels") %>%
+  mutate(natural_res = case_when(
+    natacc == 301 ~ "Fishery",
+    natacc == 302 ~ "Aquaculture",
+    natacc == 303 ~ "Water",
+    natacc == 304 ~ "Forest",
+    natacc == 305 ~ "Birds",
+    natacc == 306 ~ "Wild Aninals",
+    TRUE ~ NA
+  )) %>%
+  mutate(scores = case_when(
+    levels == 1 ~ 0.20,
+    levels == 2 ~ 0.40, 
+    levels == 3 ~ 0.60,
+    levels == 4 ~ 0.80,
+    levels == 5 ~ 1.00,
+    TRUE ~ NA
+  )) %>%
+  group_by(natural_res) %>%
+  summarise(mean_score = mean(scores))
+
+
+#byprovinces
+phdata %>%
+  mutate(province = case_when(
+    prov == 1 ~ "Stueng Treng",
+    prov == 2 ~ "Prey Veng",
+    prov == 3 ~ "Kompong Cham",
+    TRUE ~ NA)) %>%
+  select(starts_with("30"), province) %>%
+  pivot_longer(cols = `301`:`306`, 
+               names_to = "natacc",
+               values_to = "levels") %>%
+  mutate(natural_res = case_when(
+    natacc == 301 ~ "Fishery",
+    natacc == 302 ~ "Aquaculture",
+    natacc == 303 ~ "Water",
+    natacc == 304 ~ "Forest",
+    natacc == 305 ~ "Birds",
+    natacc == 306 ~ "Wild Aninals",
+    TRUE~NA
+  )) %>%
+  mutate(scores = case_when(
+    levels == 1 ~ 0.20,
+    levels == 2 ~ 0.40, 
+    levels == 3 ~ 0.60,
+    levels == 4 ~ 0.80,
+    levels == 5 ~ 1.00,
+    TRUE ~ NA
+  )) %>%
+  group_by(province, natural_res) %>%
+  summarise(mean_score = mean(scores))
+```
+
+##### Perceptions on social and economic change within the past 10 years
+
+```{r}
+#overall 
+phdata %>%
+  select(starts_with("31")) %>%
+  pivot_longer(cols = `311`:`317`, 
+               names_to = "socioeco_fct",
+               values_to = "levels") %>%
+  mutate(socioeco_labs = case_when(
+    socioeco_fct == 311 ~ "Household income increase",
+    socioeco_fct == 312 ~ "High price for food consumption",
+    socioeco_fct == 313 ~ "Employment security",
+    socioeco_fct == 314 ~ "Food security",
+    socioeco_fct == 315 ~ "Impact from global crisis",
+    socioeco_fct == 316 ~ "Quality health care and welfare",
+    socioeco_fct == 317 ~ "Education accessibility for children",   TRUE ~ NA)) %>%
+  mutate(scores = case_when(
+    levels == 1 ~ 0.20,
+    levels == 2 ~ 0.40, 
+    levels == 3 ~ 0.60,
+    levels == 4 ~ 0.80,
+    levels == 5 ~ 1.00,
+    TRUE ~ NA)) %>%
+  drop_na() %>%
+  group_by(socioeco_labs) %>%
+  summarise(mean_score = mean(scores))
+```
+
+##### Perceptions on climatic change in the past 10 years
+
+```{r}
+phdata %>%
+  select(starts_with("32")) %>%
+  pivot_longer(cols = `321`:`327`, 
+               names_to = "climate",
+               values_to = "levels") %>%
+  mutate(climate_labs = case_when(
+    climate == 321 ~ "Temperature–getting hotter",
+    climate == 322 ~ "Water level–getting lower",
+    climate == 323 ~ "Increasing salt water intrusion",
+    climate == 324 ~ "Unexpected flooding incident",
+    climate == 325 ~ "Unexpected drought",
+    climate == 326 ~ "Violate storm",
+    climate == 327 ~ "Thundering (leading to death) ",
+    TRUE ~ NA
+  )) %>%
+  mutate(scores = case_when(
+    levels == 1 ~ 0.20,
+    levels == 2 ~ 0.40, 
+    levels == 3 ~ 0.60,
+    levels == 4 ~ 0.80,
+    levels == 5 ~ 1.00,
+    TRUE ~ NA
+  )) %>%
+  drop_na() %>%
+  group_by(climate_labs) %>%
+  summarise(mean_score = mean(scores)) %>%
+  arrange(desc(mean_score))
+```
+
+### Food security of the villagers
+
+#### Have you ever faced with food shortage (the worst form) in the past 10 years?
+
+```{r}
+phdata %>%
+  select(starts_with("33")) %>%
+  mutate(foodshortage = case_when(
+    `331` == 0 ~ "Yes",
+    `331` == 1 ~ "No",
+    TRUE~NA
+  )) %>%
+  drop_na() %>%
+  group_by(foodshortage) %>%
+  summarise(count = n()) %>%
+  mutate(percent = formattable::percent(count/sum(count)))
+
+#How long?
+phdata %>%
+  select(`332`) %>%
+  summary()
+phdata %>%
+  summarise(avg = mean(`332`),
+            sd = sd(`332`))
+  
+```
+
+#### 
+
+## Income Analysis
+
+#### Loading Packages and Data
+
+```{r}
+library(haven)
+library(tidyverse)
+income_data <- read_sav("Sample-data-income analysis.sav")
+```
+
+```{r}
+
+# Specify the hypothesized population mean
+population_mean <- 23
+
+# Perform one-sample t-test
+t_test_result <- t.test(sample_data, mu = population_mean)
+p_value <- t_test_result$p.value
+cat("P-value:", p_value, "\n")
+# Check for significance
+if (p_value < 0.05) {
+  cat("The mean is significantly different from the hypothesized population mean.\n")
+} else {
+  cat("There is no significant difference from the hypothesized population mean.\n")
+}
+
+```
+
+```{r}
+# Example data
+group1 <- c(23, 25, 28, 32, 34)
+group2 <- c(19, 22, 25, 28, 30)
+group3 <- c(18, 20, 24, 26, 29)
+
+# Combine the data into a data frame
+data <- data.frame(
+  value = c(group1, group2, group3),
+  group = rep(c("Group1", "Group2", "Group3"), 
+              each = 5))
+
+# Perform ANOVA
+result_anova <- aov(value ~ group, data = data)
+
+# Summary of ANOVA
+summary(result_anova)
+
+```
+
+#### T-test
+
+-   One-sample t-test (compare two means)
+
+    -   Data 1: scale - collect only your data (collect data)
+
+    -   Data 2: scale - (existing, policy, report, previous finding, standard)
+
+-   Independent t-test
+
+    -   scale
+
+    -   category data
+
+-   Pairs t-test
+
+    -   Compare two means
+
+    -   Data 1: Scale (collected data)-before
+
+    -   Data 2: Scale (collected data) after
+
+        **Note**:
+
+        -   Knowledge
+
+        -   Skill
+
+        -   Competency (សមត្ថភាពការងារ)
+
+```{r}
+# Test q4
+q4 <- phdata %>%
+  select(`4`)
+
+```
+
+```{r}
+mean(q4$`4`)
+min(q4$`4`)
+max(q4$`4`)
+skim(q4)
+summary(q4$`4`)
+
+```
+
+##### Testing Household member in phdata
+
+```{r}
+pop_HH_member <- 5.3
+alpha <- .05
+t_test <- t.test(q4, mu = pop_HH_member, 
+                 conf.level = alpha, 
+                 alternative = "two.sided") # dif.or.not?
+#> less 
+#> greater 
+#> two-sided
+
+print(t_test)
+
+```
+
+-   **Note**: we use t-test to compare two mean: pop.mean (MoP) data and sample.mean (collected data) if difference. If p-value is sig. means that it is difference.
+
+-   In average, the comm. has HH member around 5 people. There is no evidence to support the Null Hypothesis...
+
+| **Level of Significance (α)** | **Interpretation**                              | **Commonly used in R as...** |
+|:------------------------------|:------------------------------------------------|:-----------------------------|
+| 0.05                          | 5% chance of rejecting a true null hypothesis   | `p.value <= 0.05`            |
+| 0.01                          | 1% chance of rejecting a true null hypothesis   | `p.value <= 0.01`            |
+| 0.001                         | 0.1% chance of rejecting a true null hypothesis | `p.value <= 0.001`           |
+
+```{r}
+#q38
+neifinal
+
+q38 <- neifinal %>%
+  select(Q38)
+summary(q38$Q38)
+
+```
+
+```{r}
+pop_HH_member <- 189000
+# 360000 #source: MoP, 
+# Per HH: 189000
+alpha <- .05
+t_test <- t.test(q38, mu = pop_HH_member, 
+                 conf.level = alpha, 
+                 alternative = "two.sided") # dif.or.not?
+#> less 
+#> greater 
+#> two-sided
+
+print(t_test)
+```
+
+##### Expected Salary
+
+```{r}
+q39 <- neifinal %>%
+  select(Q39)
+summary(q39$Q39)
+```
+
+#### Pairs sample t-test
+
+```{r}
+#q38: neifinal
+
+q389 <- neifinal %>%
+  rename_all(tolower) %>%
+  select(q38,q39)
+
+#checking data distribution
+boxplot(q389)
+#> The first tends to be lower than the second.
+
+# Assummed that the data is nornal and unequl vars. by using unpaired t-test
+t.test(q389$q38, q389$q39) #sig.diff
+
+#Checking for the variation differences
+var.test(q389$q38, q389$q39) # var1&2 are sig.diff of variance
+
+t.test(q389$q38, q389$q39, var.equal = FALSE)
+
+```
+
+-   When you perform a two-sample t-test and the variances of the two groups are not the same (heteroscedastic), it affects the analysis:
+
+    -   **inaccurate p-value**
+
+    -   The degrees of freedom (df) used in the t-test also depend on the assumption of equal variances. With unequal variances, a more complex calculation is needed to determine the appropriate df.
+
+-   `welch's t-test` : To deal with this problem, we use welch's t-test
+
+```{r}
+t.test(q38$Q38, q39$Q39, paired = TRUE)
+```
+
+## Pre-test and Post-test (03/Feb/24)
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(xtable)
+prepost <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Pre-test-and-post-test-data.xls", sheet = "Data file") %>%
+  select(pretest, posttest)
+```
+
+### Summary Stats
+
+Significant = two values are different
+
+```{r}
+#Standard diviation
+summary(prepost)
+vars <- ncol(prepost)
+obs <- nrow(prepost)
+obs <- data.frame(pretest = obs, 
+           posttest = obs)
+prepo_mean <- sapply(prepost, mean, na.rm = TRUE) %>%
+  data.frame() %>%
+  rename("mean" = ".")
+prepo_max <- sapply(prepost, max, na.rm = TRUE) %>%
+  data.frame() %>%
+  rename("max" = ".")
+prepo_min <- sapply(prepost, min, na.rm = TRUE) %>%
+  data.frame() %>%
+  rename("min" = ".")
+
+prepo_sd <- sapply(prepost, sd, na.rm = TRUE) |>
+  data.frame()|>
+  rename("sd" = "sapply.prepost..sd..na.rm...TRUE.")
+stbl <- data.frame( 
+       prepo_min = prepo_min, 
+       prepo_max = prepo_max,
+       prepo_mean = prepo_mean,
+       prepo_sd = prepo_sd, 
+       obs = obs)
+6.47/11.96
+stbl
+
+t.test(prepost$posttest,prepost$pretest, paired = TRUE)
+
+```
+
+Summary
+
+A paired t-test was conducted to compare the scores on pre-test (M = 6.47, SD = 4.09) and post-test (M = 11.96, SD = 4.47) for 34 participants in the xx workshop. The results revealed a significant increase in scores between the groups, t(31) = 4.82, p \< .001. This means that the workshop has increased the participant's knowledge around 50%. However, the levels of received that knowledge were varied among individuals. This suggests that we should considered about the participant selection before conducting the workshop.
+
+> Suggested:
+>
+> A paired t-test (df = 31) revealed a statistically significant increase (p \< .001) in knowledge scores for participants who attended the xx workshop. The average score increased from 6.47 (SD = 4.09) on the pre-test to 11.96 (SD = 4.47) on the post-test, representing an average improvement of 54.3%.
+>
+> While this suggests the workshop effectively enhances knowledge, it's important to acknowledge the observed variability in individual gains. Further investigation into factors influencing individual learning outcomes could inform participant selection or workshop adaptation for future iterations.
+
+Is this wrong with the participants selection?
+
+The highest score was 21 and therefore the participants in the pre-test should be more than 11.5 to be passed.
+
+```{r}
+alpha <- 0.05
+mu = 11.5
+t.test(prepost$pretest, 
+       conf.level = alpha,
+       alternative = "two.sided",
+       mu = mu)
+t.test(prepost$pretest, 
+       conf.level = alpha,
+       alternative = "greater",
+       mu = mu)
+t.test(prepost$pretest, 
+       conf.level = alpha,
+       alternative = "less",
+       mu = mu)
+```
+
+#### Pairs t-test
+
+```{r}
+#pairs t-test
+t.test(prepost$pretest, prepost$posttest, paired = TRUE)
+```
+
+#### One-sample t-test
+
+##### Descriptive Stats
+
+```{r}
+# mean
+summary(prepost) # Missing NA's not count
+sum(prepost$posttest, na.rm = TRUE)/32
+```
+
+```{r}
+mean <- sapply(prepost, mean, na.rm = TRUE)
+sd <- sapply(prepost, sd, na.rm = TRUE)
+
+tbl <- data.frame(mean, sd) 
+tbl
+```
+
+```{r}
+avg_score_pret <- 6.4
+t.test(prepost$posttest,
+       mu = avg_score_pret, 
+       conf.level = 0.05)
+```
+
+@learnmore: how to put error bar in r using ggplot2
+
+```{r}
+prepost <- prepost %>%
+  select(pretest, posttest)
+max <- sapply(prepost, max, na.rm = TRUE)
+min <- sapply(prepost, min, na.rm = TRUE)
+mean <- sapply(prepost, mean, na.rm = TRUE)
+sd <- sapply(prepost, sd, na.rm = TRUE)
+tbl <- data.frame(mean, sd, max, min) 
+tbl
+
+```
+
+-   highest score: 21 \> mean : 21/2 = 10.5
+
+Now, test weather the participants
+
+-   We want to know weather the mean between pre-test score and post-test score is different.
+
+    ```{r}
+    alpha <- 0.05
+    t.test(prepost$pretest, prepost$posttest, 
+           na.rm = TRUE, 
+           conf.level = alpha,
+           alternative = "two.sided")
+    ```
+
+### Independence t-test
+
+#### Loading data
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(readxl)
+prepost <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Pre-test-and-post-test-data.xls", sheet = "Data file")
+
+pre_post_overall <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/pre_post_test.xls", sheet = "Overall-data")
+
+gender <- pre_post_overall %>%
+  mutate(male_female = if_else(gender == 1, "Male", "Female"))
+```
+
+-   Compare two means
+
+-   Data characteristics
+
+    -   data 1: scale
+
+    -   data 2: nominal data (male, female) **Only Two options or two groups**
+
+```{r}
+gender %>%
+  select(male_female, pre_test, post_test) %>%
+  group_by(male_female) %>%
+  summarise(count = n(),
+    mean_pre_test = mean(pre_test),
+            mean_post_test = mean(post_test), 
+            sd_pre = sd(pre_test),
+            sd_post = sd(post_test))
+
+# perform the independence t-test for pre-test
+t.test(pre_test ~ male_female, var.equal = TRUE, data = gender)
+
+# perform the independent t-test for post-test 
+t.test(post_test ~ male_female, var.equal = TRUE, data = gender)
+```
+
+## Analysis of Variance (ANOVA)
+
+-   *One-Way Analysis of Variance*
+
+-   *The Scheffe Test and Tukey Test*
+
+-   **compare mean more than two groups**
+
+### One-way Annova
+
+-   One-way anova is an analysis of variance, which is known as ***one-factor ANOVA***.
+
+-   numeric group
+
+-   Assumptions:
+
+    -   **Samples** are normally or **approximately distributed**.
+
+    -   The samples must **be independent** of one another.
+
+    -   The **variances** of the population must be **equal**
+
+        -   **The F test**: This is a statistical tool used in hypothesis testing to assess whether **the variances of two populations** (or groups) are equal. @Learnmore: what does it mean the variances of two populations or groups are equal?
+
+        -   **Estimates of population variance**: We rarely have access to the entire **population data**, so we rely on samples. The F test uses variances calculated from these two separate samples as estimates of the variances in the larger populations they represent.
+
+        -   **Ratio of variances**: The core of the F test lies in comparing the ratio of these two sample variances. Intuitively, if the **populations have similar variances, the variances estimated from the samples** should also be close. The F test statistic reflects this ratio.
+
+        -   **The two estimates of the population variance**:
+
+            -   **1st estimate -** Between-group variance
+
+            -   **2nd estimate** - Within-group variance: computing the variance using all the data and not affected by differences in the means.
+
+            -   If there is **no difference in the means** between-group variance will be much larger than the within-group variance; **F test value will be significantly greater than 1**. Then the **null hypothesis** will **be rejected**.
+
+#### Manual Test (F-test)
+
+#### Hypothesis
+
+$$
+H_{0}: \mu_{1} = \mu_{2} = ...=\mu_{k}
+$$
+
+$$
+H_{1}: \text{At least one mean is different from the others}
+$$
+
+$$d.f.N = k-1 $$ : **degree of freedom**
+
+$$k$$ : is the **number of groups**
+
+$$d.f.D = N-K$$ : is the number of groups
+
+$$N$$ : is the **sum of the sample size of the groups** $$N = n_{1} + n_{2} + ... + n_{k}$$
+
+-   Null hypothesis: means of various groups are identical.
+
+-   Alternative hypothesis: At least one sample mean differs from the rest.
+
+-   All groups are numerical variable (one-ways)
+
+    $$SS_B$$ : sum of squares between groups
+
+    $$SS_W$$ : sum of squares within groups
+
+    $$k = \text{numer of groups}$$
+
+$$N = n_{1} + n_{2} + ...+ n_{k}$$ Sum of sample sizes for groups
+
+$$MS_{B} = \frac{SS_B}{k-1}$$ : **Mean Square Between Groups**
+
+$$MS_W = \frac{SS_W}{N-k}$$ : **Mean Squares Within Groups**
+
+$$F = \frac{MS_B}{MS_W}$$ : Chi-square test $$\chi^2$$
+
+#### Computer Test
+
+-   use p-value for ANOVA
+
+#### Structure of data for testing
+
+```{r}
+library(tidyverse)
+library(readxl)
+practice_p661q1 <- read_excel("C:/SP/SP/Personal Profile/Dr_Serey_Course/Data/Data_for_practices/stat_practice.xlsx") %>%
+     pivot_longer(`Simple Segmented`:`concrete plate`,
+          names_to = "group", 
+                  values_to = "value")
+
+
+mod1 <- aov(value~group ,data = practice_p661q1)
+summary(mod1)
+TukeyHSD(mod1)
+
+```
+
+```{r}
+data <- PlantGrowth
+names(PlantGrowth)
+set.seed(123)
+sample_n(data, 10)
+levels(data$group)
+data$group <- ordered(data$group, 
+                      levels = c("ctrl", "trt1", "trt2"))
+
+data %>%
+  group_by(group) %>%
+  summarise(count = n(), 
+            mean = mean(weight, na.rm = TRUE),
+            sd = sd(weight, na.rm = TRUE)) 
+data %>%
+  ggplot(aes(x = group, y = weight, color = group))+
+  geom_boxplot() +
+  theme_minimal()
+```
+
+#### One-way anova in R
+
+```{r}
+res.aov <- aov(weight ~ group, data = data)
+summary(res.aov)
+ 
+```
+
+## Multiple pairwise comparison between group means
+
+-   P-value tells us weather there is a significant different among groups, but we don't know which pairs are.
+
+-   We need Multiple Turkey pairwise comparison.
+
+### Scheffe Test
+
+-   compares the means two or more at a time.
+
+$$F_{s} = \frac{(\bar{X_{i}-\bar{X_j})^2}}{s^2_W[(1/n_i) +(1/n_j)}$$
+
+$$\bar{X_i} \text{ & } \bar{X_j}$$ : are **the means of the samples** being compared, $$n_i$$ and $$n_j$$ are the respective sample sizes
+
+$$S^2_W$$ : Within-group variance
+
+$$F'$$ : Critical value for the Scheffe test
+
+$$F' = (k-1)(C.V.)$$
+
+#### Turkey Test
+
+-   tests pairwise comparison between means when the groups have the same sample size. @Learnmore: if not the same sample size how?
+
+$$q = \frac{\bar{X_i}-\bar{X_j}}{{\sqrt{s^2_W/n}}}$$ : Formula for the Turkey Test
+
+-   @Learnmore: What does it mean by saying one-factor or two-factors in ANOVA?
+
+```{r}
+TukeyHSD(res.aov)
+```
+
+### Checking for normality
+
+#### Using Plot
+
+```{r}
+plot(res.aov, 2)
+aov_residuals <- residuals(object = res.aov ) #extract res
+```
+
+#### Using Shapiro-Wilk Test
+
+```{r}
+shapiro.test(aov_residuals)
+```
+
+-   W-statistic: 0.96607 and p-value: 0.4379, We can interpret that you fail to reject the null hypothesis of normality. In simpler terms, there's not enough evidence to conclude that your data (aov_residuals) deviates significantly from a normal distribution.
+
+-   **W-statistic**: This value ranges from 0 to 1, with **higher values** indicating a closer resemblance to a ***normal distribution***. In your case, 0.966 is quite high, suggesting a good fit.
+
+-   **p-value:** This represents the probability of obtaining a W-statistic as extreme or more extreme than yours, assuming the data is actually normal. A common threshold is 0.05.
+
+-   Since your p-value (0.4379) is greater than 0.05, it means the observed deviation from normality is not statistically significant at that level. Therefore, based on this Shapiro-Wilk test, it seems safe to assume your data is approximately normally distributed. However, it's always good practice to consider other normality tests and visualize your data's distribution for confirmation.​
+
+-   @Learnmore: However, If the W-statistic and p-value cannot reject the null hypothesis, what can happen? Why Shapiro test conducts on residual? what is residual?
+
+#### Kruskal-Wallis rank-sum test
+
+```{r}
+kruskal.test(weight ~ group, data = data)
+```
+
+-   Kruskal-Wallis chi-squared (H) = 7.9882: This statistic measures the overall variability in the ranks of the data across the groups.
+
+-   A higher value indicates a greater difference between the groups.
+
+-   df = 2: This represents the degrees of freedom, which is the number of groups minus 1.
+
+@learnmore: about logistic regression
+
+-   In this case, there are 3 groups (weight by group), so df = 2. p-value = 0.01842: This is the probability of obtaining a test statistic as extreme as 7.9882, assuming the null hypothesis is true (i.e., all groups have the same median weight). A p-value less than 0.05 is typically considered statistically significant.
+
+-   Since the p-value (0.01842) is less than 0.05, we reject the null hypothesis. This means we can be confident that at least one group's **median weight** is different from the others. However, the Kruskal-Wallis test doesn't tell you which specific groups differ.
+
+-   @Learnmore: how to calculate median weight and why it is importance to know? and how to interpret the results?
+
+```{r}
+gridtbl <- data.frame(
+  stakeholder = c("MoE", "Traditional religious leaders", 
+                  "A group of young male fishers", 
+                  "Bonna coastal resources comittee"), 
+  interest = c(2, 4, 5, 5), 
+  influto_project = c(5, 3, 4, 4),
+  influby_project = c(1, 2, 4, 4)
+)
+```
+
+## Two-Way Analysis of Variance
+
+-   Two-Way ANOVA
+
+    -   two independent variables
+
+    -   independent variables are also called **factors**
+
+    -   two-way analysis of variance
+
+## Chi-square Test
+
+-   Frequency distributions
+
+-   Tests independence of two groups or variables
+
+-   Tests the homogeneity of proportions
+
+#### Test for Goodness of fit
+
+-   Purpose: Chi-square test known as ***Pearson's Chi-square Test***
+
+    -   test the observed data vs. expected data
+
+    -   whether there is a difference between obs. and exp. data
+
+-   Types of Chi-square Test
+
+    -   Goodness of fit
+
+    -   Test of independence
+
+-   When to use Chi-square test?
+
+    -   ***categorical data** (nominal or ordinal)* that don't meet the assumptions of parametric tests (e.g. normal distribution)
+
+    -   *test the **distribution of data***
+
+-   Tests a single variance
+
+-   Chi-square can be used to see if a frequency distribution fits a specific pattern.
+
+    -   For example: Chi-square is can be used to test:
+
+        -   preference of customers on shoes/clothes' styles
+
+        -   which days traffic accidents occur more often
+
+    -   Expected and observed frequencies
+
+```{r}
+library(tidyverse)
+#Test the preference
+fruit <- tibble(
+  items = c("Cherry", "Strawberry",  "Orange", "Lime", "Grape"),
+  frequency = c(32, 28, 16,  14, 10))
+fruit
+
+```
+
+-   If there were no preference, you would expect each flavor to be selected with equal frequency.
+
+```{r}
+fruit <- fruit %>%
+  mutate(no_pref = 100/5) %>%
+  mutate(O_E = frequency-no_pref) %>%
+  mutate(O_E_sqrt = (O_E)^2)
+sum(fruit$O_E_sqrt)/sum(fruit$no_pref)
+```
+
+-   Are these differences significant (a preference exists), or are they due to chance? The chi-square goodness-of-fit test will enable the researcher to determine the answer
+
+-   Hypothesis
+
+    -   H0: Consumers show no preference for flavors of the fruit
+
+    -   H1: Consumers show a preference
+
+    -   df: 5-1 = 4
+
+-   Formula: $\chi^2 = \sum(O-E)^2/\sum(E)$
+
+    -   O = Observed frequency
+
+    -   E = Expected frequency
+
+-   Assumptions:
+
+    -   The data are obtained from a random sample.
+
+    -   The expected frequency for each category must be 5 or more.
+
+    -   Right-tailed test
+
+::: callout-tip
+Steps:
+
+1.  State the hypotheses and identify the claim
+2.  Find the critical value. (df, alpha, critical value)
+3.  Compute the test value by subtracting the expected value from the corresponding observed value, squaring the result and dividing by the expected value, and finding the sum.
+4.  Make the decision. Reject the null hypothesis if the Chi-square \> Critical value
+5.  Summarize the results.
+:::
+
+::: callout-note
+Chi-square will be small:
+
+-   Expected and Observed value are closed together
+:::
+
+```{r}
+dchisq(fruit$frequency, df = 4)
+chisq.test(fruit$frequency)
+```
+
+### Test Using Contingency Tables
+
+#### Test for Independence (Theory in the notebook)
+
+-   Two variables
+
+    -   group: doctor and nurse
+
+    -   frequencies
+
+    -   total and grand total
+
+-   Formula for expected value
+
+    $$
+    Expected_{value} = (rowSum*colSum)/grandtotal
+    $$
+
+-   
+
+```{r}
+procedure_data <- tibble(
+  group = c("Nurse", "Doctor"),
+  prefer_new_proc = c(100, 50), 
+  prefer_old_proc = c(80, 120),
+  No_pref =  c(20, 30)
+)
+```
+
+Whether there is a difference in opinion?
+
+::: callout-note
+H0: The opinion about the new procedure is independent of the profession
+
+H1: The opinion about the new procedure is dependent of the profession
+:::
+
+```{r}
+# Degree of freedom 
+df = (R-1)*(c-1) #Row, cols
+```
+
+### Session: 09 March 2024
+
+1.  @Mericherity
+
+2.  @Hragmatism
+
+3.  @Honesty
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(foreign)
+
+height <- read.spss("C:/SP/SP/Personal Profile/Dr_Serey_Course/Data/Data_for_practices/Data-file-for-practice/Height.sav")
+oct_data <- read.spss("C:/SP/SP/Personal Profile/Dr_Serey_Course/Data/Data_for_practices/Data-file-for-practice/Data_file_Oct_2011.sav") %>%
+     as_tibble() 
+phdata <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Phd_data.xls",
+                     sheet = "Data-file") %>%
+     as_tibble()
+```
+
+-   Usage = association/relationship
+
+-   Data
+
+    -   Data 1 = dichotomous data
+
+    -   Data 2 = dichotomous data
+
+    -   **Dichotomous data** - it is a nominal data with tow option, gender, male and female, yes, or no
+
+-   Association
+
+    -   causation
+
+    -   cause and effect
+
+-   Importance of Dichotomous
+
+    -   **Logistic regression**
+
+    -   **Chi-square test**
+
+Hypothesis:
+
+H0: There is no relationship between having skill and planing to
+
+-   sig. = having relationship
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(foreign)
+library(readxl)
+
+height <- read.spss("C:/SP/SP/Personal Profile/Dr_Serey_Course/Data/Data_for_practices/Data-file-for-practice/Height.sav")
+oct_data <- read.spss("C:/SP/SP/Personal Profile/Dr_Serey_Course/Data/Data_for_practices/Data-file-for-practice/Data_file_Oct_2011.sav") %>%
+     as_tibble()
+phdata <- read_excel("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/Phd_data.xls",
+                     sheet = "Data-file") %>%
+     as_tibble()
+
+```
+
+::: callout-note
+Warning!
+:::
+
+```{r}
+
+# This code is wrong. 0, and 1 is wrong.
+chi_df <- oct_data %>%
+     select(q9, q11) %>%
+     pivot_longer(q9:q11, names_to = "question", 
+                  values_to = "labs") %>% 
+     mutate(value = ifelse(labs == "Yes", 1, 0))
+mod_chi = chisq.test(chi_df$question, chi_df$value)
+mod_chi
+mod_chi$observed
+mod_chi$statistic
+mod_chi$p.value
+```
+
+```{r}
+chi_df2 <- oct_data %>%
+     select(q9, q11)
+chi_mod2 <- chisq.test(chi_df2$q9, chi_df2$q11)
+chi_mod2$observed
+chi_mod2$statistic
+chi_mod2$p.value
+```
+
+```{r}
+food_shortage_data <- oct_data %>%
+     select(q331, q34) 
+chi_mod2 <- chisq.test(food_shortage_data$q331, food_shortage_data$q34)
+chi_mod2$p.value
+chi_mod2$observed
+```
+
+-   There is a relationship between food security and and poverty line. (use p-value)
+
+-   If someone's living standard is above poverty line, they are not associated with food shortage. Otherwise, Food shortage occurs to people who are living under poverty line.
+
+# Correlation
+
+-   Data 1 - Scale
+
+-   Data 2 - Scale
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(foreign)
+
+height <- read.spss("C:/SP/SP/Personal Profile/Dr_Serey_Course/Data/Data_for_practices/Data-file-for-practice/Height.sav") %>%
+     as_tibble() %>%
+     rename_all(tolower)
+
+height
+
+#correlation
+height_cor_mod <- cor.test(height$height, height$weight, method= "pearson")
+
+heigh_cor_mod
+heigh_cor_mod$statistic
+heigh_cor_mod$parameter
+heigh_cor_mod$p.value
+
+library("ggpubr")
+ggscatter(height, x = "height", y = "weight", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Height", ylab = "Weight")
+
+ggplot(data = height, 
+       mapping = aes(x = height, y = weight)) +
+     geom_point() +
+     geom_smooth(method = lm, se = TRUE,
+                 fill = "red", 
+                 colour = 'red', 
+                 alpha = 0.2) +
+     labs(x = "Height", y = "Weight") +
+     theme(panel.background = element_rect(colour = "lightgrey"), 
+           plot.background = element_rect(color = "lightgrey"), 
+           panel.grid.major.x = element_blank(), 
+           panel.grid.minor.x = element_blank())
+     #@look at ipcc report
+```
+
+# Multivariate Multiple Linear Regression
+
+#### Example 1
+
+```{r}
+# Dimension and sample size
+p <- 3
+q <- 2
+n <- 100
+```
+
+```{r}
+# A quick way of creating a non-diagonal (valid) covariance matrix for the erros
+Sigma <- 3 * toeplitz(seq(1, 0.1, l = q))
+#use set.seed(): to control the random number generators
+set.seed(12345)
+
+# density of multivariate normal distribution: to calculate probability desity
+X <- mvtnorm::rmvnorm(n = n, mean = 1:p, sigma = diag(0.5, nrow = p, ncol = p))
+E <- mvtnorm::rmvnorm(n = n, mean = rep(0, q), sigma = Sigma)
+
+# Linear model
+B <- matrix((-1)^(1:p) * (1:p), nrow = p, ncol = q, byrow = TRUE)
+Y <- X %*% B + E
+
+#Fitting the model (note: Y and X are matrices)
+mod <- lm(Y~X)
+mod
+summary(mod)
+# Exactly equalent to
+summary(lm(Y[,1]~X))
+summary(lm(Y[, 2] ~ X))
+```
+
+#### Example 2
+
+-   When we want to add several variables of a dataset as responses through a formula interface, we have to use cbind() in the response.
+
+-   Doing "Petal.Width + Petal.Length \~ ..." is INCORRECT, as lm will understand "I(Petal.Width + Petal.Length) \~ ..." and do one single regression
+
+```{r}
+# Predict Petal's measurements from Sepal's 
+modIris <- lm(cbind(Petal.Width, Petal.Length) ~ 
+                Sepal.Length + Sepal.Width + Species, 
+              data = iris)
+summary(modIris)
+
+# The fitted values and residuals are now matrices
+head(modIris$fitted.values)
+head(modIris$residuals)
+
+# The individual models
+modIris1 <- lm(Petal.Width ~ Sepal.Length + Sepal.Width + Species, data = iris)
+modIris2 <- lm(Petal.Length ~Sepal.Length + Sepal.Width + Species, data = iris)
+print(modIris)
+summary(modIris1)
+summary(modIris2)
+```
+
+-   We get the equation:
+
+    $$
+    Petal.Width=−0.86897+0.06360×Sepal.Length+0.23237×Sepal.Width+
+    1.17375×Speciesversicolor+1.78487×Speciesvirginica
+    $$
+
+    $$
+    Petal.Length=−1.63430+0.64631×Sepal.Length
+    −0.04058×Sepal.Width+2.17023×Speciesversicolor
+    +3.04911×Speciesvirginica
+    $$
+
+### Assumptions and inference
+
+-   Fitting a multivariate linear regression is more practical than doing q separate univariate fit (esp. number of responses q is large)
+
+-   In order to achieve inference, we need assumptions
+
+    -   Linearity: $$E[Y|X = x = BX$$
+
+    -   Homoscendasticity: $$ Var[\epsilon|X_i = x_{i}, ..., X_{p} = x_p = \sum$$
+
+    -   Normality: $$\epsilon \sim N_p (0, \sum)$$
+
+    -   Independence of the errors: $$\epsilon_1, ..., \epsilon_n$$ are independent or uncorrelated $$E[\epsilon_i \epsilon_j] = 0$$ i \# j
+
+    -   Multivariate linear model$$
+        Y|X = x \sim N_q(Bx, \sum)
+        $$
+
+-   Estimator of $$B = (\beta_1, ..., \beta_q)$$ is:
+
+    $$
+    \hat{B} = (\hat{\beta}_1, ...,\hat{\beta}_q) 
+    $$
+
+But we can state it as:
+
+$$
+\hat{B}_j \sim N_p(\beta_j, \sigma_i^2(X^1X)^-1), j=1, ..., q, 
+$$
+
+$\binom{\hat{\beta}_j}{\hat{\beta}_k} \sim N_{2p}(\binom{\hat{\beta}_j}{\hat{\beta}_k}, (\binom{{\beta}_j^2(X^1X)^{-1}, {\beta}_{jk}(X^1X)^{-1}}{{\beta}_j(X^1X)^{-1}, {\beta}_{jk}^2(X^1X)^{-1} }$
+
+Where: $$\sum = (\sigma_{ij})$$ and $$\sigma_{ii} = \sigma_{i}^2$$
+
+-   joint significance of a predictor in the model
+
+-   *Multivariate ANOVA (MANOVA)* decomposition
+
+-   *Multivariate extensions* of F-test
+
+-   correlation between responses are more complex than the unvariate linear model
+
+```{r}
+#Confindence Intervals for the paramenters
+confint(modIris)
+
+# Prediction -- now more limited without confidence intervals implemented
+predict(modIris, newdata = iris[1:3, ])
+
+# MANOVA table
+manova(modIris)
+
+# "Same" as the "Sum Sq" and "Df" entries of
+anova(modIris)
+
+# The individual models
+modIris1 <- lm(Petal.Width ~Sepal.Length + Sepal.Width + Species, data = iris)
+modIris2 <- lm(Petal.Length ~Sepal.Length + Sepal.Width + Species, data = iris)
+summary(modIris1)
+summary(modIris2)
+
+anova(modIris1)
+anova(modIris2)
+```
+
+-   `anova()` serves for assessing the significance of including a new predictor for explaining all the responses.
+
+-   This is based on an extension of the *sequential* ANOVA table briefly covered in Section 2.6. The hypothesis test is by default conducted with the Pillai statistic (an extension of the F-test)
+
+    @Learnmore: <https://bookdown.org/egarpor/PM-UC3M/lm-iii-mult.html#fn130>
+
+## Multiple Regression
+
+```{r}
+rm(list = ls())
+#install.packages("moderndive")
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(ISLR)
+```
+
+Common steps for exploratory data analysis:
+
+1.  Look at the raw data values
+2.  Compute the summary statistics
+3.  Create data visualization
+
+```{r}
+evals_ch6 <- evals %>%
+select(ID, score, age, gender)
+glimpse(evals_ch6)
+
+evals_ch6 %>%
+  sample_n(size = 5)
+
+#summary Statistics using skim
+evals_ch6 %>%
+  select(score, age, gender) %>%
+  skim() %>%
+  as_tibble()
+
+#Visualize the distribution of the data
+evals_ch6 %>%
+  select(score, age, gender) %>%
+  ggplot(aes(x = score, y = age, color = gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + 
+  theme_classic()
+
+#Fit regression model (interaction model or comparing baseline model)
+score_model_interaction <- lm(score ~ age*gender, data = evals_ch6)
+score_model_interaction %>%
+  get_regression_table()
+```
+
+-   This regression uses "baseline for comparison" by using "female" as baseline
+
+-   Intercept for male is not equal to$$gender:male = -.446 \text{ (The value of male relateive to female only)}$$, but $$intercept + gender:male = 4.883 + (-.446) = 4.437$$
+
+-   Age intercept:$$age:gendermale != 0.014 \text{ ,but } = age +\\ age:gendermale = (-0.018) + 0.014 = -0.04$$
+
+-   Now, We can say:
+
+```{r}
+tibble(
+  Gender = c("Female Instructor", "Male Instructor"),
+  Intercept = c(4.883, 4.437),
+  Slope_for_Age = c(-0.018, -0.004)
+)
+```
+
+::: callout-note
+Female instructor slope is $$-0.018$$. This means that in average, a female instructor who is a year older would have a teaching score that is 0.018 units lower. For the male instructors, however, the corresponding associated decrease was on average only $$-.004$$ only. The model suggested that female age impacted negatively on teaching scores more than male instructor.
+
+$$
+\hat y = \hat {Score} = b_{0} + b_{age} age + b_{male} 1_{is male} (x) +  b_{age, male} * age* 1_{is male} \\
+= 4.883 -0.018 *age - 0.046 * 1_{is male}x + 0.014 *age*1_{is male} 
+$$
+
+$$
+1_{is male} (x) = \left\{
+\begin{array}{ll}
+1 & \text{if instructor x is male} \\
+0 & \text{Otherwise}
+\end{array}
+\right.
+$$
+
+-   $$b_0$$ is the $$intercept = 4.883$$ for the female instructors
+
+-   $$b_{age}$$ is the $$\text { slope for age} = -0.018$$ for the female instructors
+
+-   $$b_{male}$$ is the $$ \text{ the ofset } in intercept = -.446$$ for the male instructors
+
+-   $$b_{age, male}$$ is the $$ \text{ the ofset in intercept for age} = 0.014$$ for the male instructors
+
+-   interaction effects: $$b_{age, male} \text{ age:gendermale = 0.014}$$
+:::
+
+### Parallel Slopes Model
+
+-   *Regression Model*
+
+    -   numerical model
+
+    -   categorical model
+
+    -   parallel model
+
+        -   `moderndive package, using geom_parallel_slopes()`
+
+        -   `ggplot2`
+
+    -   Unlike interaction model $$Y = \beta_{0} + \beta_{2} \text{ Category x Scale} + e$$, the parallel model is $$Y = \beta_{0} + \beta_{2} \text{ Category + Scale} + e $$
+
+```{r}
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+geom_point() +
+labs(x = "Age", y = "Teaching Score", color = "Gender") +
+geom_parallel_slopes(se = FALSE) +
+  theme_classic()
+
+```
+
+```{r}
+# Fit regression model:
+score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch6)
+# Get regression table:
+get_regression_table(score_model_parallel_slopes)
+
+#> female instructor intercept = 4.484
+#> male slope = 0.191
+#> male intercept: 4.484 + 0.19 = 4.675
+#> In generall, intercept is not practical in real world
+#> Age slope of male and female = -.009
+
+
+```
+
+@Learnmore: C:\SP\SP\PersonalProfile\Stat\Statistical\_Inference_via_Data_Science_A_ModernDive_into_R
+
+# Weight Index Average (WAI)
+
+## Import Libraries
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(foreign)
+library(readxl)
+```
+
+## Loading data files
+
+```{r}
+#data income
+income_among_fisherman <- read.spss("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/income_among_fisherme.sav") %>%
+     as_tibble()
+names(income_among_fisherman) 
+```
+
+-   Likert scale ( 5-scale is good for Cambodia context because if the scale up to the 7 or more, the respondents blurred about the question)
+
+-   Weight Average Index (WAI) = 1, 5-scale (1/5)
+
+-   Download the Likert scale tbl, using Google
+
+-   @Learnmore: Should we include weighted score or fct into the regression
+
+```{r}
+# 5-scale likert-scale
+wi <- data.frame(scale = seq(1:5))
+wi <- wi %>%
+     mutate(wi = scale/5)
+wi
+
+#Weight Average Index overall (OVA)
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+     mutate(wi = case_when(
+          scale == "Very Low" ~ 0.2, 
+          scale == "Low" ~ 0.4, 
+          scale == "Moderate" ~ 0.6, 
+          scale == "High" ~ 0.8, 
+          scale == "Very High" ~ 1.0, 
+          TRUE ~ NA
+     )) %>%
+     select(law_labs:wi) %>%
+     group_by(law_labs) %>%
+     summarise(WIA = mean(wi)) %>%
+     mutate(WIA_labs = case_when(
+          WIA <= 0.2 ~ "Very Low",
+          WIA <= 0.4 ~ "Low",
+          WIA <= 0.6 ~ "Moderate",
+          WIA <=  0.8 ~ "High",
+          WIA <= 1.0 ~ "Very High",
+          TRUE ~ NA
+     )) %>%
+  mutate(OA = case_when(
+     WIA <= 0.2 ~ "VL",
+          WIA <= 0.4 ~ "L",
+          WIA <= 0.6 ~ "M",
+          WIA <=  0.8 ~ "H",
+          WIA <= 1.0 ~ "VH",
+          TRUE ~ NA
+  ))
+
+
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+     mutate(wi = case_when(
+          scale == "Very Low" ~ 0.2, 
+          scale == "Low" ~ 0.4, 
+          scale == "Moderate" ~ 0.6, 
+          scale == "High" ~ 0.8, 
+          scale == "Very High" ~ 1.0, 
+          TRUE ~ NA
+     )) %>%
+  filter(laws_knowledge == "q371") %>%
+  aov()
+```
+
+```{r}
+# privinces
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+     mutate(wi = case_when(
+          scale == "Very Low" ~ 0.2, 
+          scale == "Low" ~ 0.4, 
+          scale == "Moderate" ~ 0.6, 
+          scale == "High" ~ 0.8, 
+          scale == "Very High" ~ 1.0, 
+          TRUE ~ NA
+     )) %>%
+     select(q1,law_labs:wi) %>%
+     group_by(q1, law_labs) %>%
+     summarise(WIA = mean(wi)) %>%
+     mutate(WIA_labs = case_when(
+          WIA <= 0.2 ~ "Very Low",
+          WIA <= 0.4 ~ "Low",
+          WIA <= 0.6 ~ "Moderate",
+          WIA <=  0.8 ~ "High",
+          WIA <= 1.0 ~ "Very High",
+          TRUE ~ NA
+     )) %>%
+  mutate(OA = case_when(
+    WIA <= 0.2 ~ "VL",
+          WIA <= 0.4 ~ "L",
+          WIA <= 0.6 ~ "M",
+          WIA <=  0.8 ~ "H",
+          WIA <= 1.0 ~ "VH",
+          TRUE ~ NA
+  ))
+
+```
+
+```{r}
+# Gender p5
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", "q5", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+     mutate(wi = case_when(
+          scale == "Very Low" ~ 0.2, 
+          scale == "Low" ~ 0.4, 
+          scale == "Moderate" ~ 0.6, 
+          scale == "High" ~ 0.8, 
+          scale == "Very High" ~ 1.0, 
+          TRUE ~ NA
+     )) %>%
+     group_by(q5, law_labs) %>%
+     summarise(WIA = mean(wi)) %>%
+     arrange(desc(WIA)) %>%
+     mutate(WIA_labs = case_when(
+          WIA <= 0.2 ~ "Very Low",
+          WIA <= 0.4 ~ "Low",
+          WIA <= 0.6 ~ "Moderate",
+          WIA <=  0.8 ~ "High",
+          WIA <= 1.0 ~ "Very High",
+          TRUE ~ NA
+     ))
+
+```
+
+```{r}
+# Province p1
+# Gender p5
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", "q5", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+     mutate(wi = case_when(
+          scale == "Very Low" ~ 0.2, 
+          scale == "Low" ~ 0.4, 
+          scale == "Moderate" ~ 0.6, 
+          scale == "High" ~ 0.8, 
+          scale == "Very High" ~ 1.0, 
+          TRUE ~ NA
+     )) %>%
+     group_by(q1, law_labs) %>%
+     summarise(WIA = mean(wi), 
+               n = n()) %>%
+     mutate(WIA_labs = case_when(
+          WIA <= 0.2 ~ "Very Low",
+          WIA <= 0.4 ~ "Low",
+          WIA <= 0.6 ~ "Moderate",
+          WIA <=  0.8 ~ "High",
+          WIA <= 1.0 ~ "Very High",
+          TRUE ~ NA
+     ))
+
+```
+
+```{r}
+# perform ANNOVA
+tbl_wi <- income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+  mutate(wi = case_when(
+          scale == "Very Low" ~ 0.2, 
+          scale == "Low" ~ 0.4, 
+          scale == "Moderate" ~ 0.6, 
+          scale == "High" ~ 0.8, 
+          scale == "Very High" ~ 1.0, 
+          TRUE ~ NA
+     ))
+# Test aov for q371 
+q371_tbl <- tbl_wi %>%
+  filter
+
+mod371 <- aov(wi~q1, data = q371_tbl)
+summary(mod371)
+TukeyHSD(mod371)
+
+# Test aov for q372
+q372_tbl <- tbl_wi %>%
+  filter(laws_knowledge == "q372")
+mod372 <- aov(wi~q1, data = q372_tbl)
+summary(mod372)
+TukeyHSD(mod372)
+
+# Test aov for q373
+q373_tbl <- tbl_wi %>%
+  filter(laws_knowledge == "q373")
+mod373 <- aov(wi~q1, data = q373_tbl)
+summary(mod373)
+TukeyHSD(mod373)
+
+# Test aov for q374
+q374_tbl <- tbl_wi %>%
+  filter(laws_knowledge == "q374")
+tbl_wi %>%
+  group_by(q1) %>%
+  summarise(n = n())
+mod374 <- aov(wi~q1, data = q374_tbl)
+summary(mod374)
+TukeyHSD(mod374)
+
+# Test aov for q373
+tbl <- tbl_wi %>%
+  filter(laws_knowledge == "q375")
+mod <- aov(wi~q1, data = tbl)
+summary(mod)
+TukeyHSD(mod)
+```
+
+```{r}
+head(tbl_wi)
+mod_aov <- aov(wi~ q1, data = tbl_wi)
+summary(mod_aov)
+TukeyHSD(mod_aov)
+
+#perform the Scheffe post-hoc method
+#install.packages("DescTools")
+library(DescTools)
+ScheffeTest(mod_aov)
+```
+
+```{r}
+#Income per capita
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", "q5", "incompcapita")
+```
+
+```{r}
+income_among_fisherman %>%
+  group_by(q1) %>%
+  summarise(n = n())
+```
+
+## Transform categories data to numeric data
+
+```{r}
+library(tidyverse)
+library(foreign)
+library(readxl)
+
+#data income
+income_among_fisherman <- read.spss("C:/Rstudio/Data/Data-file-for-practice/Data-file-for-practice/income_among_fisherme.sav") %>%
+     as_tibble()
+names(income_among_fisherman) 
+```
+
+```{r}
+names(income_among_fisherman)
+head(income_among_fisherman)
+
+income_among_fisherman %>%
+  select(q5,q371:q375,incompcapita) %>%
+  pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "knowledge_scale") %>%
+  mutate(female = ifelse(q5 == "Female", 1, 0))
+```
+
+```{r}
+#Test SRM
+srmdata <- income_among_fisherman %>%
+  select(q5, q7, incompcapita) %>%
+  mutate(female = ifelse(q5 == "Female", 1, 0)) %>%
+  mutate(married = ifelse(q7 == "Married", 1, 0),
+         widow_widower = ifelse(q7 == "Widow/Widower", 1, 0),
+         divorced = ifelse(q7 == "Divorced", 1, 0)
+         )
+srm_mod <- lm(incompcapita~female+married+widow_widower+divorced, data = srmdata)
+summary(srm_mod)
+```
+
+```{r}
+#Don't do this
+srm_mod2 <- lm(incompcapita~q7 + q5, data = srmdata)
+summary(srm_mod2)
+
+```
+
+```{r}
+income_among_fisherman %>% 
+     as_tibble() %>%
+     select("q1", starts_with("q37")) %>%
+     pivot_longer(q371:q375, 
+                  names_to = "laws_knowledge", 
+                  values_to = "scale") %>%
+     mutate(law_labs = case_when(
+          laws_knowledge == "q371" ~ "Fishery law", 
+          laws_knowledge == "q372" ~ "Fishing gear limitation", 
+          laws_knowledge == "q373" ~ "Opening fishing season period",
+          laws_knowledge == "q374" ~ "Closing fish season period", 
+          laws_knowledge == "q375" ~ "Waxing moon period", 
+          TRUE~NA
+     )) %>%
+  mutate(fishery_law = 
+           ifelse(law_labs == "Fishery law", 1, 0),
+         Fishing_gear_limitation = 
+           ifelse(law_labs == "Fishing gear limitation", 1, 0),
+         Opening_fishing_season_period = 
+           ifelse(law_labs == "Opening fishing season period", 1, 0),
+         Closing_fish_season_period = 
+           ifelse(law_labs == "Closing fish season period", 1, 0),
+         Waxing_moon_period = 
+           ifelse(law_labs == "Waxing moon period", 1, 0))
+```
+
+```{r}
+gdf <-
+  tibble(g = c(1, 1, 2, 3), v1 = 10:13, v2 = 20:23) %>%
+  group_by(g)
+set.seed(1)
+n <- rnorm(1)
+gdf %>% mutate(across(v1:v2, ~ .x + n))
+
+#> .cols: each col
+#> .fns: each function
+```
+
+# CH13: Nonparametric Statistics
+
+@Readmore
+
+## The Sign Test
+
+### Single-Sample Sign Test
+
+In hypothesis testing, a **conjectured median** refers to the specific value you propose to be the median of a population, which is then tested against a null hypothesis (H₀) stating the opposite. It's particularly relevant when using **non-parametric tests** like the **median sign test**.
+
+1.  **Formulating the Conjecture and Null Hypothesis:**
+
+    -   You **conjecture** a specific value for the population median (denoted as M₀)
+
+    -   You set up the **null hypothesis (H₀)** stating that the population median **is not equal** to your conjecture (M₀).
+
+    **Median Sign Test:**
+
+    -   You collect a **sample** of data from the population.
+
+    -   For each data point in the sample, you compare it to the conjectured median (M₀):
+
+        -   If the data point is **greater than M₀**, you assign a **+1**.
+
+        -   If the data point is **less than M₀**, you assign a **-1**.
+
+        -   If the data point is **equal to M₀**, you might exclude it or treat it as a separate category depending on the specific test implementation.
+
+    -   You then use the **number of positive (+1) signs** in the sample to calculate a **test statistic**.
+
+    -   Based on the test statistic and the chosen significance level (α), you **decide whether to reject the null hypothesis (H₀)** or fail to reject it
+
+    **Interpretation:**
+
+    -   **Rejecting H₀:** If the test statistic indicates a low probability of observing the obtained data under the assumption of H₀ being true (less than α), you **reject the null hypothesis**. This suggests that the population median is likely **different** from your conjecture (M₀).
+
+    -   **Failing to Reject H₀:** If the test statistic doesn't provide enough evidence to reject H₀, you are **inconclusive** about the population median being equal or different from your conjecture. It's important to remember that failing to reject H₀ doesn't necessarily mean the null hypothesis is true; it simply means you lack sufficient evidence to disprove it with the chosen sample size and significance level.
+
+**Example:**
+
+Suppose you suspect the median income in a city is higher than \$50,000. You conduct a survey and collect data from a sample of residents. You then use the median sign test with the conjectured median (M₀) set to \$50,000.
+
+Based on the test outcome, you might:
+
+-   **Reject H₀:** This suggests the population median income is likely **greater than \$50,000**, supporting your suspicion.
+
+-   **Fail to Reject H₀:** This leaves the question about the population median income **uncertain**. It might be \$50,000, higher, or lower, but your sample doesn't provide conclusive evidence at the chosen significance level.
+
+**When sample greater than 26, use t-test.**
+
+@Note: Why perform median sign test?:
+
+-   Unlike t-test, the sign test has **fewer assumptions**
+
+    -   requires only **ordinal** (least to greatest)
+
+-   Less sensitive to **outliers**
+
+-   Simple and relative easy to implement
+
+-   **Non-Parametric Alternative** : rank of data
+
+@Continoue
+
+## The Wilcoxon Signed-Rank Test
+
+-   samples are **dependent**
+
+-   before-and-after test
+
+-   this situation **Wilcoxon signed-rank** will be used.
+
+@Learnmore: How do we know how samples are dependent or not?
