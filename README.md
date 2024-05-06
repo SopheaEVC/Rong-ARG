@@ -1,19 +1,18 @@
 # Rong-ARG
-This file aims to create Koh Rong Archipelegos. 
 The project uses Shapefiles from [OpenDevelopment Cambodia](https://data.opendevelopmentcambodia.net/dataset/administrative-boundaries-of-cambodia-2014) Website.
 
-Sub-national Administrative Boundaries contain __three__ files:
+Sub-national Administrative Boundaries are used:
 1. province.geojson
 2. district.geojson
 3. commune.geojson
 
+## Data location
 - These data files located in [sfdata_v2](https://github.com/SopheaEVC/Rong-ARG/tree/main/sf_data) folder. 
 - Map design concept was inspired by [GorkyFlorez](https://github.com/GorkyFlorez/Mapa_Ubicacion_Cuenca/blob/main/Mapa%20de%20clasificacion.png). 
 
-| Figure | Table |
-|---|---|
-| [Figure 1](https://colab.google/)| [Table 1](https://colab.google/)|
-| Figure 2 | Table 2 |
+## Reference:
+- [Administrative Area in Preah Sihanouk province by District and commune](https://www.stat.go.jp/info/meetings/cambodia/pdf/18com_11.pdf)
+
 
 # 2. FIA 
 Questions:
@@ -21,7 +20,12 @@ Questions:
 - What is the Largest fishery community in Preah Sihanouk province?
 
 ## Data sources
-- The datasets are extracted from [OpenDevelopment Cambodia](https://data.opendevelopmentcambodia.net/dataset/fishery?type=dataset), derived as geojson format. 
+- The datasets are extracted from [OpenDevelopment Cambodia](https://data.opendevelopmentcambodia.net/dataset/fishery?type=dataset), derived as geojson and spreadsheet formats.
+
+## References
+- [Agreement and relevant documents](https://data.opendevelopmentcambodia.net/dataset/fishery/resource/f529a001-16af-4700-ad58-9c978e2b17ff) will show you the detail information of the fishery community in Preah Sihanouk Province. 
+
+
 
 
 

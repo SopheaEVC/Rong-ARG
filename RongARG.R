@@ -1,8 +1,11 @@
 # Loading packages
-library(rjson)
-library(sf)
-library(tidyverse)
-library(ggspatial)
+rm(list = ls())
+libs <- c("rjson", "sf", "tidyverse", "ggspatial")
+installed.libs <- libs %in% rownames(installed.packages())
+if(any(installed.libs == FALSE)){
+        install.packages(libs[!installed.libs])
+}
+invisible(lapply(libs, library, character.only = TRUE))
 
 # Loading files 
 crs = st_crs("+proj=longlat +datum=WGS84 +no_defs")
@@ -67,7 +70,7 @@ ggplot() +
                 fill = ps.c.col) +
         coord_sf(xlim = c(103.0, 104.5), 
                  ylim = c(10.4, 11.5)) + 
-        annotate(geom = "text", x = 103.18, y = 11,
+        annotate(geom = "text", x = 103.4121, y = 11.5142,
                  hjust = 0, vjust = 1,
                  label = "Koh Kong", size = 3,
                  color = "black", 
@@ -79,11 +82,10 @@ ggplot() +
                  fontface="italic")+
         annotate(geom = "text", x =104.02 , y = 10.8,
                  hjust = 0, vjust = 0,
-                 angle = 60,
                  label = "Kampot", size = 3, 
                  color = "black", 
                  fontface="italic")+
-        annotate(geom = "text", x =103.7 , y = 10.6,
+        annotate(geom = "text", x =103.8062 , y = 10.86601,
                  hjust = 0, vjust = 0,
                  label = "Preah Sihanouk", size = 3, 
                  angle = 60, color = "black", 
