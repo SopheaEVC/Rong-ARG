@@ -2,9 +2,9 @@
 The project uses Shapefiles from [OpenDevelopment Cambodia](https://data.opendevelopmentcambodia.net/dataset/administrative-boundaries-of-cambodia-2014) Website.
 
 Sub-national Administrative Boundaries are used:
-1. [province.geojson](https://github.com/SopheaEVC/Rong-ARG/blob/main/sfdata_v2/commune.geojson)
-2. [district.geojson](https://github.com/SopheaEVC/Rong-ARG/blob/main/sfdata_v2/district.geojson)
-3. [commune.geojson](https://github.com/SopheaEVC/Rong-ARG/blob/main/sfdata_v2/commune.geojson)
+1. [province.geojson](https://github.com/SopheaEVC/Rong-ARG/tree/main/sfdata_v2)
+2. [district.geojson](https://github.com/SopheaEVC/Rong-ARG/tree/main/sfdata_v2)
+3. [commune.geojson](https://github.com/SopheaEVC/Rong-ARG/tree/main/sfdata_v2)
 
 ## Data location
 - These data files located in [sfdata_v2](https://github.com/SopheaEVC/Rong-ARG/tree/main/sf_data) folder. 
