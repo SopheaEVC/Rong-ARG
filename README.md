@@ -19,6 +19,12 @@ Questions:
 - What is the largest fishery community among the coastal areas including Kep, Kampot, Preah Sihanouk, and Koh Kong province? 
 - What is the Largest fishery community in Preah Sihanouk province?
 
+## FIA - Preah Sihanouk Monicipality, Koh Rong commune
+There are three fishery communities in Koh Rong commune:
+1. [Phum Daem Thkov](https://maps.app.goo.gl/LMR1zrkGjFG1iUB3A): 1734 ha
+2. [Phum Preaek Svay](https://maps.app.goo.gl/gGn75sQvjVRsJjwn6): 7447 ha
+3. [Phum Koh Rong Sanloem](https://maps.app.goo.gl/Wb3HoDQVvqCAnKG99): 11257 ha
+
 ## Data sources
 - The datasets are extracted from [OpenDevelopment Cambodia](https://data.opendevelopmentcambodia.net/dataset/fishery?type=dataset), derived as [geoPackage](https://github.com/SopheaEVC/Rong-ARG/blob/main/sfdata_v2/fci_en.gpkg) and [csv](https://github.com/SopheaEVC/Rong-ARG/blob/main/sfdata_v2/fci.csv).
 

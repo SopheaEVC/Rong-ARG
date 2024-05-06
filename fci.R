@@ -21,5 +21,5 @@ fci %>%
      filter(province == "Preah Sihanouk") %>%
      select(province, district, commune, size_ha) %>%
      arrange(desc(size_ha)) %>%
-     as_tibble() %>%
-     filter(district != "Not found")
+     as_tibble()
+
